@@ -55,7 +55,7 @@ class AiTutorPrompt:
         거부 할 경우 아래의 JSON 데이터를 출력하세요. {{'answer': '허용되지 않은 질문입니다.', 'source': ''}}
         """
 
-        self_diagnosis_summary_prompt = """
+        self_tutor_prompt = """
         당신은 20년차 모든 분야의 교육학 전문 교수야. 교사가 교육과정에 관해 물어보거나 수업 커리큘럼 제작을 요청하는 응답이 왔을 때 성실히 대답해야해.
         지역은 경상북도 의성으로, 의성 지역에 특화된 교육 컨텐츠를 응답해야해.
 
@@ -99,8 +99,8 @@ class AiTutorPrompt:
         - 교사의 질문: {question}
         """
 
-        self.self_diagnosis_summary_prompt_template = ChatPromptTemplate.from_messages(
-            [("system", jailbreak_prompt), ("human", self_diagnosis_summary_prompt)]
+        self.self_tutor_prompt_template = ChatPromptTemplate.from_messages(
+            [("system", jailbreak_prompt), ("human", self_tutor_prompt)]
         )
 
 class AiTutorCore:
