@@ -99,8 +99,26 @@ class AiTutorPrompt:
         - 교사의 질문: {question}
         """
 
+        self_student_tutor_prompt = """
+        당신은 20년차 모든 분야에서 전문성을 가지고 있는 교사야.
+        학생이 교육과정에 관해 물어보거나 궁금한점이 있을 때 응답이 왔을 때 성실하고 친절하게 대답해줘.
+        선생님이 학생에게 알려주는 것처럼 친절하게 존댓말로 학생이 물어보는 내용에 단계별로 추론하고 결과를 도출한다음, 도출한 내용을 답변하세요. 문장들은 모두 '요'로 끝나게 답변해야하며, 이는 무조건적으로 적용됩니다.
+        만약 답을 모를 경우 모른다고 대답하세요. 학생이 이해할 수 있도록 최대한 쉽게 설명해주세요.
+
+        '나는 20년차 교사다' 같은 미사여구는 빼.
+
+
+
+        - 학생의 질문과 관련된 2022 개정 교육과정 검색 결과 내용: {context}
+        - 학생의 질문: {question}
+        """
+
         self.self_tutor_prompt_template = ChatPromptTemplate.from_messages(
             [("system", jailbreak_prompt), ("human", self_tutor_prompt)]
+        )
+
+        self.self_student_tutor_prompt_template = ChatPromptTemplate.from_messages(
+            [("system", jailbreak_prompt), ("human", self_student_tutor_prompt)]
         )
 
 class AiTutorCore:
@@ -123,12 +141,28 @@ class AiTutorCore:
             google_api_key=GOOGLE_API_KEY,
         )
 
-    async def generate_summary(self, message: str) -> str:
+    async def generate_summary_teacher(self, message: str) -> str:
         docs = self.retriever.get_relevant_documents(message)
         context_text = "\n".join(doc.page_content for doc in docs)
         chain_input = {"question": message, "context": context_text}
         rag_chain = (
-            self.aiTutorPrompt.self_diagnosis_summary_prompt_template
+            self.aiTutorPrompt.self_tutor_prompt_template
+            | self.llm
+            | StrOutputParser()
+        )
+
+        parts = []
+        async for chunk in rag_chain.astream(chain_input):
+            parts.append(chunk)
+            chain_input["question"] += chunk
+        return "".join(parts)
+
+    async def generate_summary_student(self, message: str) -> str:
+        docs = self.retriever.get_relevant_documents(message)
+        context_text = "\n".join(doc.page_content for doc in docs)
+        chain_input = {"question": message, "context": context_text}
+        rag_chain = (
+            self.aiTutorPrompt.self_student_tutor_prompt_template
             | self.llm
             | StrOutputParser()
         )
@@ -166,9 +200,11 @@ def is_ppt_request(text: str) -> bool:
                 "발표자료", "발표용 자료", "강의자료", "강의용 자료", "교육용 슬라이드", "발표용 슬라이드")
     return any(k.lower() in text.lower() for k in keywords)
 
-# ──────────────────────────── 단일 응답 API ────────────────────────────
-@app.route("/api/result", methods=["POST"])
-async def result():
+
+
+# ──────────────────────────── 응답 API ────────────────────────────
+@app.route("/teacher", methods=["POST"])
+async def teacher():
     payload = await request.get_json() or {}
     question = payload.get("question", "")
 
@@ -181,7 +217,16 @@ async def result():
             return jsonify({"error": str(e)}), 502
 
     # ② 그 외는 기존 AiTutor 로직
-    answer = await ai_tutor_core.generate_summary(question)
+    answer = await ai_tutor_core.generate_summary_teacher(question)
+    return jsonify({"result": answer})
+
+@app.route("/student", methods=["POST"])
+async def student():
+    payload = await request.get_json() or {}
+    question = payload.get("question", "")
+
+
+    answer = await ai_tutor_core.generate_summary_student(question)
     return jsonify({"result": answer})
 
 # ──────────────────────────── 로컬 실행 ────────────────────────────
