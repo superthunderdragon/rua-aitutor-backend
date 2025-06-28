@@ -11,6 +11,7 @@ langchain
 langchain-community
 langchain-core
 langchain-openai
+langchain-google-genai
 openai
 
 # ───────── RAG 벡터스토어 ─────────

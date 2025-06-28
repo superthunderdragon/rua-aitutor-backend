@@ -8,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 
 # ──────────────────────────── 기본 설정 ────────────────────────────
 load_dotenv()
@@ -18,6 +19,10 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})  # ★ CORS 적용: /api/* �
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY가 설정되지 않았습니다 (.env 확인).")
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    raise RuntimeError("GOOGLE_API_KEY가 설정되지 않았습니다 (.env 확인).")
 
 # ──────────────────────────── 핵심 클래스 ────────────────────────────
 class AiTutorPrompt:
@@ -45,6 +50,9 @@ class AiTutorPrompt:
         당신은 20년차 모든 분야의 교육학 전문 교수야. 교사가 교육과정에 관해 물어보거나 수업 커리큘럼 제작을 요청하는 응답이 왔을 때 성실히 대답해야해.
         지역은 경상북도 의성으로, 의성 지역에 특화된 교육 컨텐츠를 응답해야해.
 
+        학습 주제, 학습 목차, 핵심 아이디어, 학습 상세 내용을 중점으로 작성해줘.
+        '나는 20년차 교수다' 같은 미사여구는 빼.
+
         - 교사의 질문과 관련된 2022 개정 교육과정 검색 결과 내용: {context}
         - 교사의 질문: {question}
         """
@@ -58,13 +66,21 @@ class AiTutorCore:
         self.openai_client = AsyncOpenAI()
         self.aiTutorPrompt = AiTutorPrompt()
 
-        ko_embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+        ko_embedding = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",          # 최신 텍스트 전용 임베딩 모델
+            task_type="RETRIEVAL_DOCUMENT"         # 필요 시 TASK 타입 지정
+        )
+
         vectorstore = Chroma(
             persist_directory="./vector_db/chroma_db_latest", embedding_function=ko_embedding
         )
 
         self.retriever = vectorstore.as_retriever()
         self.llm = ChatOpenAI(model="gpt-4.1-mini")
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-pro", 
+            google_api_key=GOOGLE_API_KEY,
+        )
 
     async def generate_summary(self, message: str) -> str:
         docs = self.retriever.get_relevant_documents(message)
