@@ -1,18 +1,21 @@
 # ───────── 웹 서버 ─────────
-flask[async]==2.3.3       # async 뷰 지원
-flask-cors==4.0.0         # CORS 허용
+flask[async]       # async 뷰 지원
+flask-cors         # CORS 허용
 
 # ───────── ASGI 실행 ─────────
 gunicorn==22.0.0
 uvicorn[standard]==0.29.0 # gunicorn-uvicorn worker용
 
 # ───────── LangChain & OpenAI ─────────
-langchain
-langchain-community
-langchain-core
-langchain-openai
-langchain-google-genai
-openai
+langchain==0.3.26
+langchain-community==0.3.26
+langchain-core==0.3.66
+langchain-openai==0.3.27
+langchain-google-genai==2.1.5
+langchain-chroma==0.2.4
+langchain-ollama==0.3.3
+openai==1.93.0
 
 # ───────── RAG 벡터스토어 ─────────
-chromadb
+chromadb==1.0.13
+protobuf==5.29.5

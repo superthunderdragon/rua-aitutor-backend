@@ -53,7 +53,7 @@ steps:
       - --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$COMMIT_SHA
       - --region=asia-northeast1
       - --platform=managed
-      - --port=3000                       # ★ 포트 고정
+      - --port=5100                      # ★ 포트 고정
       #- --set-env-vars=PORT=3000
       - --allow-unauthenticated   # 필요 시 삭제
       - --quiet

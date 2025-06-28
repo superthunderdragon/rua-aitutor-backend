@@ -76,9 +76,8 @@ class AiTutorCore:
         )
 
         self.retriever = vectorstore.as_retriever()
-        self.llm = ChatOpenAI(model="gpt-4.1-mini")
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro", 
+            model="gemini-2.5-flash", 
             google_api_key=GOOGLE_API_KEY,
         )
 

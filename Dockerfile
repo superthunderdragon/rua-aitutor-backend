@@ -22,4 +22,4 @@ COPY . .
 EXPOSE 5100
 
 # ▶ 7. 엔트리포인트 (Gunicorn + Uvicorn worker)
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:5100", "app:app"]
+CMD ["python", "app.py"]
