@@ -212,7 +212,7 @@ async def teacher():
     if is_ppt_request(question):
         try:
             ppt_data = await ai_tutor_core.generate_presentation(question)
-            return jsonify({"result": str(ppt_data)})  # id·embed·download 포함
+            return jsonify({"result": (ppt_data['download'])}) 
         except Exception as e:
             return jsonify({"error": str(e)}), 502
 
