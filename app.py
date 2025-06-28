@@ -60,7 +60,7 @@ class AiTutorCore:
 
         ko_embedding = OpenAIEmbeddings(model="text-embedding-3-small")
         vectorstore = Chroma(
-            persist_directory="./vector_db/chroma_db30", embedding_function=ko_embedding
+            persist_directory="./vector_db/chroma_db_latest", embedding_function=ko_embedding
         )
 
         self.retriever = vectorstore.as_retriever()
