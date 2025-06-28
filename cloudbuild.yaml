@@ -5,10 +5,10 @@
 
 substitutions:
   _REGION: us-central1               # Artifact Registry 멀티리전·리전 (예: asia, us, us-central1 …)
-  _REPOSITORY: rua-backend
-  _AR_REPOSITORY: rua-backend       # Artifact Registry 저장소 ID
-  _IMAGE_NAME: backend      # 이미지 이름
-  _RUN_SERVICE: backend # Cloud Run 서비스 이름 (없으면 첫 배포 때 자동 생성)
+  _REPOSITORY: rua-backend-aitutor
+  _AR_REPOSITORY: rua-backend-aitutor       # Artifact Registry 저장소 ID
+  _IMAGE_NAME: backend-aitutor      # 이미지 이름
+  _RUN_SERVICE: backend-aitutor # Cloud Run 서비스 이름 (없으면 첫 배포 때 자동 생성)
   _RUN_REGION: us-central1  # Cloud Run 서비스(런타임) 리전
 
 options:
