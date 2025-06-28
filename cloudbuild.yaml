@@ -50,7 +50,7 @@ steps:
       - run
       - deploy
       - '${_RUN_SERVICE}'
-      - --image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$COMMIT_SHA
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_IMAGE_NAME}:$COMMIT_SHA
       - --region=asia-northeast1
       - --platform=managed
       - --port=5100                      # ★ 포트 고정
