@@ -1,6 +1,8 @@
 # ───────── 웹 서버 ─────────
 flask[async]       # async 뷰 지원
 flask-cors         # CORS 허용
+quart
+quart-cors
 
 # ───────── ASGI 실행 ─────────
 gunicorn==22.0.0

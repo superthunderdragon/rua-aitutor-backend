@@ -1,6 +1,6 @@
 import os, json, asyncio
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from quart import Quart, request, jsonify
+from quart_cors import cors
 
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -13,8 +13,8 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 # ──────────────────────────── 기본 설정 ────────────────────────────
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})  # ★ CORS 적용: /api/* 엔드포인트 모두 허용
+app = Quart(__name__)
+app = cors(app, allow_origin="*")
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
@@ -146,11 +146,10 @@ ai_tutor_core = AiTutorCore()
 # ──────────────────────────── 단일 응답 API ────────────────────────────
 @app.route("/api/result", methods=["POST"])
 async def result():
-    payload = request.get_json(silent=True) or {}
+    payload = await request.get_json() or {}
     question = payload.get("question", "")
-
-    full_answer = await ai_tutor_core.generate_summary(question)
-    return jsonify({"result": full_answer}), 200
+    answer = await ai_tutor_core.generate_summary(question)
+    return jsonify({"result": answer})
 
 # ──────────────────────────── 로컬 실행 ────────────────────────────
 if __name__ == "__main__":
