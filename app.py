@@ -1,6 +1,7 @@
 import os, json, asyncio
 from quart import Quart, request, jsonify
 from quart_cors import cors
+import httpx  # ★ NEW
 
 from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import StrOutputParser
@@ -23,6 +24,14 @@ if not OPENAI_API_KEY:
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise RuntimeError("GOOGLE_API_KEY가 설정되지 않았습니다 (.env 확인).")
+
+SLIDESGPT_API_KEY = os.getenv("SLIDESGPT_API_KEY") 
+if not SLIDESGPT_API_KEY:
+    raise RuntimeError("SLIDESGPT_API_KEY가 설정되지 않았습니다 (.env 확인).")
+
+SLIDESGPT_URL = "https://api.slidesgpt.com/v1/presentations/generate"
+
+
 
 # ──────────────────────────── 핵심 클래스 ────────────────────────────
 class AiTutorPrompt:
@@ -100,8 +109,8 @@ class AiTutorCore:
         self.aiTutorPrompt = AiTutorPrompt()
 
         ko_embedding = GoogleGenerativeAIEmbeddings(
-            model="models/embedding-001",          # 최신 텍스트 전용 임베딩 모델
-            task_type="RETRIEVAL_DOCUMENT"         # 필요 시 TASK 타입 지정
+            model="models/embedding-001",
+            task_type="RETRIEVAL_DOCUMENT",
         )
 
         vectorstore = Chroma(
@@ -110,16 +119,13 @@ class AiTutorCore:
 
         self.retriever = vectorstore.as_retriever()
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash", 
+            model="gemini-2.5-flash",
             google_api_key=GOOGLE_API_KEY,
         )
 
     async def generate_summary(self, message: str) -> str:
         docs = self.retriever.get_relevant_documents(message)
-
-        # 검색된 문서들의 내용을 하나의 문자열로 결합합니다.
         context_text = "\n".join(doc.page_content for doc in docs)
-
         chain_input = {"question": message, "context": context_text}
         rag_chain = (
             self.aiTutorPrompt.self_diagnosis_summary_prompt_template
@@ -130,21 +136,55 @@ class AiTutorCore:
         parts = []
         async for chunk in rag_chain.astream(chain_input):
             parts.append(chunk)
-            chain_input["question"] += chunk  # 누적
-
+            chain_input["question"] += chunk
         return "".join(parts)
 
+    async def generate_presentation(self, prompt: str) -> dict:
+        """SlidesGPT 호출"""
+        headers = {
+            "Authorization": f"Bearer {SLIDESGPT_API_KEY}",
+            "Content-Type": "application/json",
+        }
+
+        docs = self.retriever.get_relevant_documents(prompt)
+        context_text = "\n".join(doc.page_content for doc in docs)
+
+        async with httpx.AsyncClient(timeout=150) as client:
+            resp = await client.post(SLIDESGPT_URL, json={"prompt": (prompt + "\n\n참고용자료: " + context_text[0:2000])}, headers=headers)
+        if resp.status_code == 200:
+            return resp.json()
+        elif resp.status_code == 400:
+            raise ValueError("SlidesGPT: 잘못된 요청입니다. 프롬프트를 확인하세요.")
+        else:
+            raise RuntimeError(f"SlidesGPT 서버 오류({resp.status_code})")
+
 ai_tutor_core = AiTutorCore()
+
+def is_ppt_request(text: str) -> bool:
+    """피피티/슬라이드 제작 의도 탐지"""
+    keywords = ("피피티", "ppt", "프레젠테이션", "presentation", "슬라이드", "교육자료", "교육용 자료", 
+                "발표자료", "발표용 자료", "강의자료", "강의용 자료", "교육용 슬라이드", "발표용 슬라이드")
+    return any(k.lower() in text.lower() for k in keywords)
 
 # ──────────────────────────── 단일 응답 API ────────────────────────────
 @app.route("/api/result", methods=["POST"])
 async def result():
     payload = await request.get_json() or {}
     question = payload.get("question", "")
+
+    # ① PPT 제작 요청이면 SlidesGPT 호출
+    if is_ppt_request(question):
+        try:
+            ppt_data = await ai_tutor_core.generate_presentation(question)
+            return jsonify({"result": ppt_data})  # id·embed·download 포함
+        except Exception as e:
+            return jsonify({"error": str(e)}), 502
+
+    # ② 그 외는 기존 AiTutor 로직
     answer = await ai_tutor_core.generate_summary(question)
     return jsonify({"result": answer})
 
 # ──────────────────────────── 로컬 실행 ────────────────────────────
 if __name__ == "__main__":
-    # ASGI 서버(Uvicorn 등)로 실행 권장, dev 용으로만 사용
+    # ASGI 서버(Uvicorn 등) 권장, dev 용
     app.run(host="0.0.0.0", port=5100, debug=True)
