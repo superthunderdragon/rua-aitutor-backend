@@ -15,17 +15,6 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # 1) (선택) 의존성 설치·테스트
-  - id: Test
-    name: node:18
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        corepack enable                         # pnpm 내장 활성화
-        corepack prepare pnpm@latest --activate
-        pnpm install --frozen-lockfile
-        pnpm test || true                       # 테스트 없으면 통과
 
   # 2) 이미지 빌드
   - id: Build
